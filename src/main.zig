@@ -4,13 +4,23 @@ const Allocator = std.mem.Allocator;
 
 fn BKDF() type {
     const Hash = std.crypto.hash.sha2.Sha256;
-    const Prf = std.crypto.auth.hmac.Hmac(Hash);
     const hash_len = Hash.digest_length;
     const key_len = Hash.block_length;
     const pepper_len_max = key_len;
     const version = 1;
 
     return struct {
+        const Prf = struct {
+            fn init(key: []const u8) Hash {
+                std.debug.assert(key.len <= Hash.block_length);
+                var h = Hash.init(.{});
+                var prefix = [_]u8{0} ** Hash.block_length;
+                @memcpy(prefix[0..key.len], key);
+                h.update(key);
+                return h;
+            }
+        };
+
         fn int(comptime T: type, n: T) [@sizeOf(T)]u8 {
             var t: [@sizeOf(T)]u8 = undefined;
             mem.writeInt(T, &t, n, .little);
