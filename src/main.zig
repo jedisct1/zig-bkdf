@@ -2,8 +2,7 @@ const std = @import("std");
 const mem = std.mem;
 const Allocator = std.mem.Allocator;
 
-fn BKDF() type {
-    const Hash = std.crypto.hash.sha2.Sha256;
+fn BKDF(comptime Hash: type) type {
     const hash_len = Hash.digest_length;
     const key_len = Hash.block_length;
     const pepper_len_max = key_len;
@@ -207,7 +206,7 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{ .safety = true }).init;
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
-    const Kdf = BKDF();
+    const Kdf = BKDF(std.crypto.hash.sha2.Sha256);
     const password = "password";
     const salt = "salt";
     const personalization = "";
