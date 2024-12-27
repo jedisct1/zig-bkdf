@@ -8,18 +8,18 @@ fn BKDF(comptime Hash: type) type {
     const pepper_len_max = key_len;
     const version = 1;
 
-    return struct {
-        const Prf = struct {
-            fn init(key: []const u8) Hash {
-                std.debug.assert(key.len <= Hash.block_length);
-                var h = Hash.init(.{});
-                var prefix = [_]u8{0} ** Hash.block_length;
-                @memcpy(prefix[0..key.len], key);
-                h.update(key);
-                return h;
-            }
-        };
+    const Prf = struct {
+        fn init(key: []const u8) Hash {
+            std.debug.assert(key.len <= Hash.block_length);
+            var h = Hash.init(.{});
+            var prefix = [_]u8{0} ** Hash.block_length;
+            @memcpy(prefix[0..key.len], key);
+            h.update(key);
+            return h;
+        }
+    };
 
+    return struct {
         fn int(comptime T: type, n: T) [@sizeOf(T)]u8 {
             var t: [@sizeOf(T)]u8 = undefined;
             mem.writeInt(T, &t, n, .little);
