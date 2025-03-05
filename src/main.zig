@@ -203,7 +203,7 @@ fn BKDF(comptime Hash: type) type {
 }
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{ .safety = true }).init;
+    var gpa = std.heap.DebugAllocator(.{ .safety = true }).init;
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
     const Kdf = BKDF(std.crypto.hash.sha2.Sha256);
