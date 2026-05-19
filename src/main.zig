@@ -12,7 +12,7 @@ fn BKDF(comptime Hash: type) type {
         fn init(key: []const u8) Hash {
             std.debug.assert(key.len <= Hash.block_length);
             var h = Hash.init(.{});
-            var prefix = [_]u8{0} ** Hash.block_length;
+            var prefix: [Hash.block_length]u8 = @splat(0);
             @memcpy(prefix[0..key.len], key);
             h.update(key);
             return h;
@@ -43,7 +43,7 @@ fn BKDF(comptime Hash: type) type {
             var pseudorandom = try allocator.alloc(u8, space_cost * time_cost * 12);
             defer allocator.free(pseudorandom);
 
-            const empty_key = [_]u8{0} ** key_len;
+            const empty_key: [key_len]u8 = @splat(0);
             var h = Prf.init(&empty_key);
             h.update(&int(u32, version));
             h.update(personalization);
@@ -134,7 +134,7 @@ fn BKDF(comptime Hash: type) type {
 
             var outputs = try allocator.alloc([hash_len]u8, parallelism);
             defer allocator.free(outputs);
-            var key = [_]u8{0} ** key_len;
+            var key: [key_len]u8 = @splat(0);
             @memcpy(key[0..pepper.len], pepper);
             var h = Prf.init(&key);
             h.update(password);
@@ -154,12 +154,11 @@ fn BKDF(comptime Hash: type) type {
             if (parallelism == 1) {
                 outputs[0] = try balloonCore(allocator, key, personalization, space_cost, time_cost, parallelism, 1);
             } else {
-                var pool: std.Thread.Pool = undefined;
-                try pool.init(.{ .allocator = allocator });
-                defer pool.deinit();
+                const threads = try allocator.alloc(std.Thread, parallelism);
+                defer allocator.free(threads);
                 var ok = std.atomic.Value(bool).init(true);
                 for (0..parallelism) |i| {
-                    _ = try pool.spawn(balloonCoreThreadWorker, .{
+                    threads[i] = try std.Thread.spawn(.{}, balloonCoreThreadWorker, .{
                         allocator,
                         &ok,
                         &outputs[i],
@@ -171,6 +170,7 @@ fn BKDF(comptime Hash: type) type {
                         @as(u32, @intCast(i + 1)),
                     });
                 }
+                for (threads) |t| t.join();
                 if (!ok.load(.monotonic)) return error.OutOfMemory;
             }
 
